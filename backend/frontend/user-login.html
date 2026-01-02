@@ -3,26 +3,163 @@
 <head>
   <title>User Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .card {
+      border: none;
+      border-radius: 15px;
+    }
+    .input-group-text {
+      background: white;
+      cursor: pointer;
+    }
+    .btn-login {
+      background: #0d6efd;
+      transition: 0.3s;
+      font-weight: 600;
+    }
+    .btn-login:hover {
+      background: #0b5ed7;
+      transform: scale(1.02);
+    }
+  </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container mt-5">
-  <div class="card p-4 shadow mx-auto" style="max-width:400px;">
-    <h3 class="text-center">User Login</h3>
+<div class="container">
+  <div class="card p-4 shadow-lg mx-auto" style="max-width:400px;">
+    <div class="text-center mb-4">
+        <i class="bi bi-person-circle fs-1 text-primary"></i>
+        <h3 class="mt-2">User Login</h3>
+        <p class="text-muted small">Enter your credentials to access your account</p>
+    </div>
 
-    <input id="phone" class="form-control mb-3" placeholder="Phone number">
-    <input id="password" type="password" class="form-control mb-3" placeholder="Password">
+    <div class="mb-3">
+        <label class="form-label small fw-bold">Phone Number</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+            <input id="phone" class="form-control" placeholder="9876543210">
+        </div>
+    </div>
 
-    <button class="btn btn-primary w-100" onclick="login()">Login</button>
+    <div class="mb-3">
+        <label class="form-label small fw-bold">Password</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input id="password" type="password" class="form-control" placeholder="••••••••">
+            <span class="input-group-text" onclick="togglePassword()">
+                <i id="toggleIcon" class="bi bi-eye"></i>
+            </span>
+        </div>
+    </div>
 
-    <p id="result" class="text-danger text-center mt-2"></p>
+    <div class="d-flex justify-content-between mb-3">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rememberMe">
+            <label class="form-check-label small" for="rememberMe">Remember me</label>
+        </div>
+        <a href="#" class="small text-decoration-none">Forgot Password?</a>
+    </div>
 
-    <div class="text-center mt-3">
-      <a href="index.html">← Back to Portal</a>
+    <button id="loginBtn" class="btn btn-primary w-100 btn-login" onclick="login()">
+        Login
+    </button>
+
+    <p id="result" class="text-center mt-3 mb-0" style="min-height: 24px;"></p>
+
+    <div class="text-center mt-4">
+      <a href="index.html" class="text-muted text-decoration-none small">
+        <i class="bi bi-arrow-left"></i> Back to Portal
+      </a>
     </div>
   </div>
 </div>
 
-<script src="user-login.js"></script>
+<script>
+// Auto-fill phone if remembered
+window.onload = () => {
+    if(localStorage.getItem("rememberedPhone")) {
+        document.getElementById("phone").value = localStorage.getItem("rememberedPhone");
+        document.getElementById("rememberMe").checked = true;
+    }
+}
+
+// 1. SHOW/HIDE PASSWORD LOGIC
+function togglePassword() {
+    const pwd = document.getElementById("password");
+    const icon = document.getElementById("toggleIcon");
+    if (pwd.type === "password") {
+        pwd.type = "text";
+        icon.classList.replace("bi-eye", "bi-eye-slash");
+    } else {
+        pwd.type = "password";
+        icon.classList.replace("bi-eye-slash", "bi-eye");
+    }
+}
+
+// 2. ENHANCED LOGIN FUNCTION
+async function login() {
+    const phone = document.getElementById("phone").value;
+    const password = document.getElementById("password").value;
+    const result = document.getElementById("result");
+    const btn = document.getElementById("loginBtn");
+    const rememberMe = document.getElementById("rememberMe").checked;
+
+    if (!phone || !password) {
+        result.className = "text-danger text-center mt-3";
+        result.innerText = "Please enter both phone and password.";
+        return;
+    }
+
+    // Remember Me logic
+    if(rememberMe) {
+        localStorage.setItem("rememberedPhone", phone);
+    } else {
+        localStorage.removeItem("rememberedPhone");
+    }
+
+    // UI Feedback: Loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Verifying...';
+    result.innerText = "";
+
+    try {
+        const response = await fetch("http://localhost:5000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            sessionStorage.setItem("userPhone", phone);
+            result.className = "text-success text-center mt-3";
+            result.innerText = "Login Successful! Redirecting...";
+            setTimeout(() => window.location.href = "nearby-vehicles.html", 1500);
+        } else {
+            throw new Error(data.error || "Login failed");
+        }
+    } catch (error) {
+        result.className = "text-danger text-center mt-3";
+        result.innerText = error.message;
+        btn.disabled = false;
+        btn.innerHTML = "Login";
+    }
+}
+
+// Allow Enter key to trigger login
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') login();
+});
+</script>
+
 </body>
 </html>

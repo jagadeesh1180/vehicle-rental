@@ -1,81 +1,100 @@
-// Load vehicles dynamically when page opens
-window.onload = function () {
-  fetch("http://localhost:5000/vehicles")
-    .then(res => res.json())
-    .then(data => {
-      const select = document.getElementById("vehicle");
-      select.innerHTML = "";
-
-      data.forEach(v => {
-        const option = document.createElement("option");
-        option.value = v.name;
-        option.text = v.name + " (₹" + v.price + "/hr)";
-        select.appendChild(option);
-      });
-    })
-    .catch(() => {
-      alert("Unable to load vehicles");
-    });
+/* UTILITY: Show loading state */
+const toggleBtn = (isLoading) => {
+    const btn = document.querySelector("button[onclick='bookVehicle()']");
+    btn.disabled = isLoading;
+    btn.innerHTML = isLoading ? 
+        '<span class="spinner-border spinner-border-sm"></span> Processing...' : 
+        'Book & Pay';
 };
 
-function bookVehicle() {
-  const name = document.getElementById("name").value;
-  const vehicle = document.getElementById("vehicle").value;
-  const hours = document.getElementById("hours").value;
+/* 1. LOAD VEHICLES WITH FALLBACK */
+window.onload = async function () {
+    const select = document.getElementById("vehicle");
+    const selectedFromMap = sessionStorage.getItem("selectedVehicle");
 
-  if (!name || !vehicle || !hours) {
-    document.getElementById("result").innerText = "All fields are required";
-    return;
-  }
+    try {
+        const res = await fetch("http://localhost:5000/vehicles");
+        const data = await res.json();
+        
+        select.innerHTML = data.map(v => `
+            <option value="${v.name}" ${v.name === selectedFromMap ? 'selected' : ''}>
+                ${v.name} (₹${v.price}/hr)
+            </option>
+        `).join("");
+        
+    } catch (err) {
+        document.getElementById("result").innerHTML = 
+            '<span class="text-danger small">Network error: Could not load fleet.</span>';
+    }
+};
 
-  // STEP 1: Create booking (get total amount)
-  fetch("http://localhost:5000/book", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, vehicle, hours })
-  })
-  .then(res => res.json())
-  .then(data => {
+/* 2. CONSOLIDATED BOOKING & PAYMENT WORKFLOW */
+async function bookVehicle() {
+    const name = document.getElementById("name").value.trim();
+    const vehicle = document.getElementById("vehicle").value;
+    const hours = document.getElementById("hours").value;
+    const result = document.getElementById("result");
 
-    if (!data.total) {
-      document.getElementById("result").innerText = "Booking failed";
-      return;
+    if (!name || !vehicle || !hours) {
+        result.className = "text-warning small";
+        result.innerText = "Please complete all fields.";
+        return;
     }
 
-    // STEP 2: Create Razorpay order (TEST MODE)
-    fetch("http://localhost:5000/create-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: data.total })
-    })
-    .then(res => res.json())
-    .then(order => {
+    toggleBtn(true);
+    result.innerText = "";
 
-      const options = {
-        key: "rzp_test_RyxFepgcVzqUKT", // 🔴 PUT YOUR TEST KEY ID HERE
-        amount: order.amount,
-        currency: "INR",
-        name: "Vehicle Rental",
-        description: "Vehicle Booking Payment (Test Mode)",
-        order_id: order.id,
-        handler: function (response) {
-          document.getElementById("result").innerText =
-            "Payment Successful (Test Mode)\nPayment ID: " +
-            response.razorpay_payment_id;
-        },
-        prefill: {
-          name: name
-        },
-        theme: {
-          color: "#3399cc"
-        }
-      };
+    try {
+        // STEP 1: Initialize Booking on Backend
+        const bookRes = await fetch("http://localhost:5000/book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, vehicle, hours })
+        });
+        const bookData = await bookRes.json();
 
-      const rzp = new Razorpay(options);
-      rzp.open();
-    });
-  })
-  .catch(() => {
-    document.getElementById("result").innerText = "Server error";
-  });
+        if (!bookData.total) throw new Error("Booking registration failed.");
+
+        // STEP 2: Create Razorpay Order
+        const orderRes = await fetch("http://localhost:5000/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: bookData.total })
+        });
+        const order = await orderRes.json();
+
+        // STEP 3: Open Razorpay Interface
+        const options = {
+            key: "rzp_test_RyxFepgcVzqUKT", 
+            amount: order.amount,
+            currency: "INR",
+            name: "DriveX Rentals",
+            description: `Booking for ${vehicle}`,
+            order_id: order.id,
+            modal: {
+                ondismiss: function() { toggleBtn(false); }
+            },
+            handler: function (response) {
+                // SUCCESS FLOW
+                result.innerHTML = `
+                    <div class="alert alert-success mt-3">
+                        <i class="bi bi-check-circle"></i> Payment Successful!<br>
+                        <small>Ref: ${response.razorpay_payment_id}</small>
+                    </div>`;
+                toggleBtn(false);
+                // Optional: Redirect to receipt page
+                // window.location.href = "success.html?id=" + response.razorpay_payment_id;
+            },
+            prefill: { name: name, contact: sessionStorage.getItem("userPhone") },
+            theme: { color: "#000000" } // Matching your dark UI
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+    } catch (err) {
+        result.className = "text-danger small";
+        result.innerText = "Error: " + err.message;
+        toggleBtn(false);
+    }
 }

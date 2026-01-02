@@ -1,37 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User Login</title>
+  <title>User Portal | Verification</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <style>
+    body {
+      background: #f0f2f5;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card {
+      border: none;
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    .step-content {
+      display: none; /* Hidden by default */
+    }
+    .step-active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .otp-input-wrapper {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .otp-box {
+      width: 45px;
+      height: 50px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+    }
+    .otp-box:focus {
+      border-color: #198754;
+      outline: none;
+      box-shadow: 0 0 5px rgba(25, 135, 84, 0.2);
+    }
+  </style>
 </head>
 
 <body>
 
 <div class="container d-flex justify-content-center align-items-center" style="height:100vh;">
-  <div class="card p-4 shadow" style="width:400px;">
+  <div class="card p-4 shadow-lg" style="width:400px;">
+    
+    <div id="step1" class="step-content step-active">
+        <div class="text-center mb-4">
+            <div class="bg-success text-white rounded-circle d-inline-block p-3 mb-3">
+                <i class="bi bi-phone fs-3"></i>
+            </div>
+            <h4>User Verification</h4>
+            <p class="text-muted small">Enter your mobile number to get started</p>
+        </div>
 
-    <h4 class="text-center mb-3">Enter User Portal</h4>
+        <div class="input-group mb-3">
+            <span class="input-group-text bg-white">+91</span>
+            <input id="phone" type="tel" class="form-control form-control-lg" placeholder="10-digit number" maxlength="10">
+        </div>
 
-    <input
-      id="phone"
-      class="form-control mb-3"
-      placeholder="Enter mobile number (optional)"
-    >
+        <button class="btn btn-success w-100 py-2 fw-bold" onclick="showStep2()">
+          Get OTP <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+    </div>
 
-    <button
-      class="btn btn-success w-100"
-      onclick="enterUserPortal()"
-    >
-      Continue
-    </button>
+    <div id="step2" class="step-content">
+        <div class="text-center mb-4">
+            <h4>Verify Code</h4>
+            <p class="text-muted small">Enter the 4-digit code sent to <br> <strong id="displayPhone"></strong></p>
+        </div>
 
-    <p class="text-muted text-center mt-3">
-      OTP temporarily disabled
-    </p>
+        <div class="otp-input-wrapper mb-4">
+            <input type="text" class="otp-box" maxlength="1" onkeyup="moveFocus(this, 1)">
+            <input type="text" class="otp-box" maxlength="1" onkeyup="moveFocus(this, 2)">
+            <input type="text" class="otp-box" maxlength="1" onkeyup="moveFocus(this, 3)">
+            <input type="text" class="otp-box" maxlength="1" onkeyup="moveFocus(this, 4)">
+        </div>
+
+        <button class="btn btn-success w-100 py-2 fw-bold" onclick="enterUserPortal()">
+          Verify & Continue
+        </button>
+
+        <div class="text-center mt-4">
+            <p class="text-muted small mb-1">Didn't receive code?</p>
+            <button class="btn btn-link btn-sm text-success text-decoration-none fw-bold" id="resendBtn" disabled>
+                Resend in <span id="timer">30</span>s
+            </button>
+        </div>
+        <button class="btn btn-link btn-sm w-100 mt-2 text-muted" onclick="showStep1()">Change Number</button>
+    </div>
 
   </div>
 </div>
 
-<script src="user-otp.js"></script>
+<script>
+// Toggle Steps
+function showStep2() {
+    const phone = document.getElementById("phone").value;
+    if (phone.length < 10) {
+        alert("Please enter a valid 10-digit number");
+        return;
+    }
+    
+    document.getElementById("displayPhone").innerText = "+91 " + phone;
+    document.getElementById("step1").classList.remove("step-active");
+    document.getElementById("step2").classList.add("step-active");
+    startTimer();
+}
+
+function showStep1() {
+    document.getElementById("step2").classList.remove("step-active");
+    document.getElementById("step1").classList.add("step-active");
+}
+
+// Auto-focus to next OTP box
+function moveFocus(curr, nextIdx) {
+    if (curr.value.length === 1 && nextIdx < 5) {
+        document.querySelectorAll('.otp-box')[nextIdx].focus();
+    }
+}
+
+// Resend Timer Logic
+function startTimer() {
+    let timeLeft = 30;
+    const timerDisplay = document.getElementById("timer");
+    const resendBtn = document.getElementById("resendBtn");
+    
+    const countdown = setInterval(() => {
+        timeLeft--;
+        timerDisplay.innerText = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = "Resend Now";
+        }
+    }, 1000);
+}
+
+// Final Portal Entry
+function enterUserPortal() {
+    const phone = document.getElementById("phone").value || "Guest";
+    sessionStorage.setItem("userPhone", phone);
+
+    const btn = event.target;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Verifying...';
+
+    setTimeout(() => {
+        window.location.href = "map.html";
+    }, 800);
+}
+
+</script>
+
 </body>
 </html>

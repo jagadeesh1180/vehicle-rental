@@ -1,22 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Book Vehicle</title>
+  <title>Book Vehicle | DriveX</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; }
+    .booking-card { background: #fff; padding: 2.5rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); max-width: 450px; width: 100%; border: 1px solid #e1e4e8; }
+    .price-display { background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e0; }
+    .form-label { font-weight: 600; color: #4a5568; font-size: 0.9rem; }
+    .promo-link { font-size: 0.8rem; cursor: pointer; text-decoration: none; color: #0d6efd; }
+  </style>
 </head>
 <body>
-  <h2>Book a Vehicle</h2>
 
-  <input id="name" placeholder="Your Name"><br><br>
-  <select id="vehicle">
-    <option>JCB</option>
-    <option>Tractor</option>
-  </select><br><br>
-  <input id="hours" type="number" placeholder="Hours"><br><br>
+<div class="booking-card">
+  <div class="text-center mb-4">
+    <div class="d-inline-block p-3 bg-primary bg-opacity-10 rounded-circle mb-3">
+        <i class="bi bi-calendar-check text-primary fs-3"></i>
+    </div>
+    <h3 class="fw-bold">Book Your Ride</h3>
+  </div>
 
-  <button onclick="book()">Book Now</button>
+  <div class="mb-3">
+    <label class="form-label">Full Name</label>
+    <div class="input-group">
+        <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+        <input id="name" class="form-control" placeholder="John Doe">
+    </div>
+  </div>
 
-  <p id="result"></p>
+  <div class="row">
+    <div class="col-md-12 mb-3">
+        <label class="form-label">Vehicle Type</label>
+        <select id="vehicle" class="form-select" onchange="calculatePrice()">
+          <option value="" data-price="0">-- Select Fleet --</option>
+        </select>
+    </div>
+  </div>
 
-  <script src="script.js"></script>
+  <div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Pick-up Date</label>
+        <input type="date" id="bookDate" class="form-control" onchange="validateDate()">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Duration</label>
+        <div class="input-group">
+            <input id="hours" type="number" class="form-control" value="1" min="1" oninput="calculatePrice()">
+            <span class="input-group-text bg-white">Hrs</span>
+        </div>
+    </div>
+  </div>
+
+  <div class="mb-3" id="promoSection">
+    <a class="promo-link" onclick="togglePromo()"><i class="bi bi-tag"></i> Have a promo code?</a>
+    <input id="promoInput" class="form-control form-control-sm mt-2 d-none" placeholder="Enter code (e.g. DRIVE10)" oninput="calculatePrice()">
+  </div>
+
+  <div class="price-display text-center mb-4">
+    <small class="text-muted d-block mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Total Fare</small>
+    <h2 id="totalDisplay" class="mb-0 text-primary fw-bold">₹0</h2>
+    <small id="discountMsg" class="text-success d-none">Promo Applied!</small>
+  </div>
+
+  <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" onclick="book()">
+    Confirm Booking <i class="bi bi-arrow-right ms-2"></i>
+  </button>
+
+  <p id="result" class="mt-3 text-center small"></p>
+</div>
+
+<script>
+// Set min date to today
+function validateDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bookDate').setAttribute('min', today);
+}
+validateDate();
+
+function togglePromo() {
+    document.getElementById('promoInput').classList.toggle('d-none');
+}
+
+function fetchVehicles() {
+  const select = document.getElementById("vehicle");
+  fetch("http://localhost:5000/vehicles")
+    .then(res => res.json())
+    .then(data => {
+      data.forEach(v => {
+        let opt = document.createElement("option");
+        opt.value = v.name;
+        opt.innerText = `${v.name} (₹${v.price}/hr)`;
+        opt.setAttribute("data-price", v.price);
+        select.appendChild(opt);
+      });
+    });
+}
+
+function calculatePrice() {
+  const select = document.getElementById("vehicle");
+  const hours = document.getElementById("hours").value || 0;
+  const promo = document.getElementById("promoInput").value.toUpperCase();
+  const selectedOption = select.options[select.selectedIndex];
+  const pricePerHour = selectedOption.getAttribute("data-price") || 0;
+
+  let total = hours * pricePerHour;
+  
+  // Logic for promo code DRIVE10 (10% off)
+  if (promo === "DRIVE10" && total > 0) {
+      total = total * 0.9;
+      document.getElementById("discountMsg").classList.remove('d-none');
+  } else {
+      document.getElementById("discountMsg").classList.add('d-none');
+  }
+
+  document.getElementById("totalDisplay").innerText = `₹${Math.round(total)}`;
+}
+
+function book() {
+  const name = document.getElementById("name").value;
+  const vehicle = document.getElementById("vehicle").value;
+  const hours = document.getElementById("hours").value;
+  const date = document.getElementById("bookDate").value;
+  const result = document.getElementById("result");
+
+  if (!name || !vehicle || hours <= 0 || !date) {
+    result.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-circle"></i> Missing fields</span>`;
+    return;
+  }
+
+  result.innerHTML = `<div class="spinner-border spinner-border-sm text-primary"></div> Securing your booking...`;
+  
+  fetch("http://localhost:5000/book", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, vehicle, hours, date })
+  })
+  .then(res => res.json())
+  .then(() => {
+    result.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Booking confirmed for ${date}!</span>`;
+    // Clear inputs
+    document.getElementById("name").value = "";
+    document.getElementById("hours").value = "1";
+    calculatePrice();
+  })
+  .catch(() => {
+    result.innerHTML = `<span class="text-danger">Server Error</span>`;
+  });
+}
+
+fetchVehicles();
+</script>
+
 </body>
 </html>

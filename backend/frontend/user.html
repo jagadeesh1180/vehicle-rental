@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User | Book Vehicle</title>
+  <title>Confirm Booking</title>
 
-  <!-- Bootstrap -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
     rel="stylesheet">
@@ -15,116 +14,179 @@
       font-family: "Segoe UI", sans-serif;
     }
 
-    .navbar {
-      background: #000;
-      border-bottom: 1px solid #333;
-    }
-
     .card {
       background: #111;
       border: 1px solid #333;
-      color: #fff;
+      border-radius: 14px;
     }
 
-    .form-control,
-    .form-select {
+    .form-control {
       background: #000;
       color: #fff;
       border: 1px solid #444;
     }
 
-    .form-control::placeholder {
+    .form-control:read-only {
+      background: #111;
       color: #aaa;
     }
 
     .btn-primary {
       background: #fff;
       color: #000;
-      border: none;
       font-weight: 600;
+      border: none;
     }
   </style>
 </head>
 
 <body>
 
-<!-- USER LOGIN PROTECTION -->
+<!-- USER PROTECTION -->
 <script>
-if (!sessionStorage.getItem("userPhone")) {
-  window.location.href = "user-otp.html";
+if (!sessionStorage.getItem("selectedVehicle")) {
+  window.location.href = "map.html";
 }
 </script>
 
-<!-- TOP BAR -->
-<nav class="navbar px-4">
-  <span class="navbar-brand fw-bold text-white">
-    Vehicle Rental – Booking
-  </span>
-</nav>
+<div class="container d-flex justify-content-center align-items-center" style="height:100vh;">
+  <div class="card p-4 shadow-lg w-100" style="max-width:420px;">
 
-<!-- BOOKING FORM -->
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
 
-      <div class="card p-4 shadow-lg">
+    <h4 class="text-center mb-3">Confirm Booking</h4>
 
-        <h4 class="text-center mb-4">
-          Complete Your Booking
-        </h4>
-
-        <div class="mb-3">
-          <label class="form-label">Your Name</label>
-          <input
-            type="text"
-            id="name"
-            class="form-control"
-            placeholder="Enter your name">
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Selected Vehicle</label>
-          <input
-            type="text"
-            id="vehicle"
-            class="form-control"
-            readonly>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Number of Hours</label>
-          <input
-            type="number"
-            id="hours"
-            class="form-control"
-            min="1"
-            value="1">
-        </div>
-
-        <button class="btn btn-primary w-100 mt-2" onclick="bookVehicle()">
-          Book & Pay
-        </button>
-
-        <div class="text-center mt-3">
-          <strong id="result"></strong>
-        </div>
-
-      </div>
-
+    <div class="mb-3">
+      <label class="form-label">Vehicle</label>
+      <input id="vehicle" class="form-control" readonly>
     </div>
+
+    <div class="mb-3">
+      <label class="form-label">Price per Hour</label>
+      <input id="price" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Number of Hours</label>
+      <input
+        id="hours"
+        type="number"
+        min="1"
+        value="1"
+        class="form-control">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Total Amount</label>
+      <input id="total" class="form-control" readonly>
+    </div>
+
+    <button class="btn btn-primary w-100" onclick="confirmBooking()">
+      Confirm & Book
+    </button>
+
+    <p id="result" class="text-success text-center mt-3"></p>
+
+  </div>
+</div>
+<div class="mb-3">
+  <label class="form-label">Payment Method</label>
+
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="payment"
+      id="payOnline" value="online" checked>
+    <label class="form-check-label" for="payOnline">
+      Pay Online (UPI / Card)
+    </label>
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="payment"
+      id="payCash" value="cash">
+    <label class="form-check-label" for="payCash">
+      Pay on Site (Cash)
+    </label>
   </div>
 </div>
 
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="script.js"></script>
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+  <a href="map.html">📍 Map</a>
+  <a href="user.html" class="active">🚜 Book</a>
+  <a href="index.html">🏠 Home</a>
+</div>
+
 
 <script>
-/* Load selected vehicle from map */
-const selectedVehicle = sessionStorage.getItem("selectedVehicle");
-if (selectedVehicle) {
-  document.getElementById("vehicle").value = selectedVehicle;
+const vehicle = sessionStorage.getItem("selectedVehicle");
+const price = Number(sessionStorage.getItem("selectedPrice"));
+
+document.getElementById("vehicle").value = vehicle;
+document.getElementById("price").value = "₹" + price;
+
+function updateTotal() {
+  const hours = Number(document.getElementById("hours").value);
+  document.getElementById("total").value = "₹" + (hours * price);
 }
+
+document.getElementById("hours").addEventListener("input", updateTotal);
+updateTotal();
+
+function confirmBooking() {
+  const hours = Number(document.getElementById("hours").value);
+  const paymentMethod =
+    document.querySelector('input[name="payment"]:checked').value;
+
+  const totalAmount = hours * price;
+
+  if (paymentMethod === "cash") {
+    // Direct booking
+    saveBooking("cash");
+    return;
+  }
+
+  // Razorpay Test Payment
+  const options = {
+    key: "rzp_test_RyxFepgcVzqUKT", // TEST KEY (replace later)
+    amount: totalAmount * 100,
+    currency: "INR",
+    name: "Vehicle Rental",
+    description: vehicle + " booking",
+    handler: function (response) {
+      saveBooking("online", response.razorpay_payment_id);
+    },
+    theme: {
+      color: "#0d6efd"
+    }
+  };
+  function saveBooking(method, paymentId = null) {
+  fetch("/book", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: sessionStorage.getItem("userPhone") || "User",
+      vehicle,
+      hours: Number(document.getElementById("hours").value),
+      payment_method: method,
+      payment_id: paymentId
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("result").innerText =
+      "Booking confirmed! Total: ₹" + data.total;
+  });
+}
+
+
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+
+ 
+
 </script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 
 </body>
 </html>

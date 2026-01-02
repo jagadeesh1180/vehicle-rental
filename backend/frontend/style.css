@@ -78,3 +78,67 @@ a:hover {
   background: linear-gradient(to right, #36d1dc, #5b86e5);
   border: none;
 }
+/* Global reset */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: #000;
+  color: #fff;
+}
+
+/* Navbar */
+.navbar {
+  background-color: #000;
+  border-bottom: 1px solid #333;
+}
+
+.navbar-brand {
+  font-weight: 600;
+  color: #fff !important;
+}
+
+/* Cards */
+.card {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+}
+
+/* Inputs */
+.form-control,
+.form-select {
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+.form-control::placeholder {
+  color: #aaa;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #fff;
+  color: #000;
+  border: none;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background-color: #ddd;
+}
+
+/* Text */
+.text-muted {
+  color: #aaa !important;
+}
+@media (max-width: 576px) {
+  .card {
+    margin: 10px;
+  }
+}
+

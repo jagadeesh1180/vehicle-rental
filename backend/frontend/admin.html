@@ -1,94 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Dashboard</title>
-
-  <!-- Bootstrap -->
+  <title>Pro Admin Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
-    body {
-      background: #000;
-      color: #fff;
-      font-family: "Segoe UI", sans-serif;
-    }
+    :root { --dark-bg: #0a0a0a; --card-bg: #161616; --accent: #0d6efd; }
+    body { background: var(--dark-bg); color: #eee; font-family: "Inter", "Segoe UI", sans-serif; }
+    
+    .sidebar { background: var(--card-bg); min-height: 100vh; border-right: 1px solid #333; transition: 0.3s; }
+    .sidebar a { color: #aaa; text-decoration: none; display: block; padding: 14px 20px; border-left: 3px solid transparent; transition: 0.2s; }
+    .sidebar a:hover { background: #222; color: #fff; border-left: 3px solid var(--accent); }
+    .sidebar a.active { background: #222; color: #fff; border-left: 3px solid var(--accent); }
 
-    .sidebar {
-      background: #111;
-      min-height: 100vh;
-      border-right: 1px solid #333;
-    }
-
-    .sidebar a {
-      color: #fff;
-      text-decoration: none;
-      display: block;
-      padding: 12px 16px;
-      border-bottom: 1px solid #222;
-    }
-
-    .sidebar a:hover {
-      background: #222;
-    }
-
-    .content {
-      padding: 20px;
-    }
-
-    .card {
-      background: #111;
-      border: 1px solid #333;
-    }
-
-    .form-control {
-      background: #000;
-      color: #fff;
-      border: 1px solid #444;
-    }
-
-    .table-dark {
-      background: #111;
-    }
+    .content { padding: 30px; }
+    .card { background: var(--card-bg); border: 1px solid #333; border-radius: 12px; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-5px); }
+    
+    .form-control, .form-select { background: #000; color: #fff; border: 1px solid #444; }
+    .form-control:focus { background: #050505; color: #fff; border-color: var(--accent); box-shadow: none; }
+    
+    .table { border-color: #333; color: #eee; }
+    .table-hover tbody tr:hover { background-color: #1a1a1a; }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
   </style>
 </head>
 
 <body>
 
-<!-- ADMIN LOGIN PROTECTION -->
 <script>
-if (!sessionStorage.getItem("admin")) {
-  window.location.href = "admin-login.html";
-}
+  if (!sessionStorage.getItem("admin")) { window.location.href = "admin-login.html"; }
 </script>
 
 <div class="container-fluid">
   <div class="row">
 
-    <!-- SIDEBAR -->
-    <div class="col-md-3 col-lg-2 sidebar p-0">
-      <h5 class="text-center py-3 border-bottom">
-        <i class="bi bi-tools"></i> Admin Panel
-      </h5>
+    <div class="col-md-3 col-lg-2 sidebar p-0 pt-3">
+      <div class="px-4 mb-4">
+        <h5 class="fw-bold text-white"><i class="bi bi-speedometer2 me-2"></i>DRIVE-X</h5>
+        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Management</small>
+      </div>
 
-      <a href="#" onclick="loadBookings()">
-        <i class="bi bi-list-check"></i> Bookings
-      </a>
-
-      <a href="#" onclick="loadVehicles()">
-        <i class="bi bi-truck"></i> Vehicles
-      </a>
-
-      <a href="#" onclick="logout()">
-        <i class="bi bi-box-arrow-right"></i> Logout
-      </a>
+      <a href="#" onclick="loadDashboard(this)" class="active"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
+      <a href="#" onclick="loadBookings(this)"><i class="bi bi-calendar-check me-2"></i> Bookings</a>
+      <a href="#" onclick="loadVehicles(this)"><i class="bi bi-car-front me-2"></i> Fleet</a>
+      
+      <div class="mt-5 px-4"><small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Account</small></div>
+      <a href="#" onclick="logout()" class="text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
     </div>
 
-    <!-- CONTENT -->
     <div class="col-md-9 col-lg-10 content">
       <div id="adminContent">
-        <h4>Welcome, Admin</h4>
-        <p class="text-muted">Select an option from the left menu.</p>
+        <h3 class="mb-4">System Overview</h3>
+        <div class="row g-4" id="statsContainer">
+            <div class="col-md-4">
+                <div class="card stat-card p-4">
+                    <div class="d-flex justify-content-between">
+                        <div><p class="text-muted mb-0">Total Revenue</p><h2 class="mb-0 fw-bold">₹0</h2></div>
+                        <div class="fs-1 text-success"><i class="bi bi-currency-dollar"></i></div>
+                    </div>
+                </div>
+            </div>
+            </div>
       </div>
     </div>
 
@@ -96,129 +74,186 @@ if (!sessionStorage.getItem("admin")) {
 </div>
 
 <script>
-/* LOGOUT */
-function logout() {
-  sessionStorage.removeItem("admin");
-  window.location.href = "index.html";
+/* HELPER: Update Active Link */
+function setActive(el) {
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
 }
 
-/* LOAD BOOKINGS */
-function loadBookings() {
+/* 1. DASHBOARD OVERVIEW (NEW FEATURE) */
+function loadDashboard(el) {
+    if(el) setActive(el);
+    Promise.all([
+        fetch("http://localhost:5000/bookings").then(r => r.json()),
+        fetch("http://localhost:5000/vehicles").then(r => r.json())
+    ]).then(([bookings, vehicles]) => {
+        const totalRev = bookings.reduce((acc, curr) => acc + (curr.total || 0), 0);
+        
+        let html = `
+            <h3 class="mb-4">Dashboard Overview</h3>
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card stat-card p-4 border-start border-4 border-primary">
+                        <p class="text-muted mb-0">Total Revenue</p>
+                        <h2 class="fw-bold">₹${totalRev.toLocaleString()}</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card p-4 border-start border-4 border-warning">
+                        <p class="text-muted mb-0">Active Bookings</p>
+                        <h2 class="fw-bold">${bookings.length}</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card p-4 border-start border-4 border-info">
+                        <p class="text-muted mb-0">Fleet Size</p>
+                        <h2 class="fw-bold">${vehicles.length} Units</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-4">
+                <h5>Recent Activity</h5>
+                <p class="text-muted">Newest booking from: ${bookings.length > 0 ? bookings[bookings.length-1].user_phone : 'N/A'}</p>
+            </div>
+        `;
+        document.getElementById("adminContent").innerHTML = html;
+    });
+}
+
+/* 2. ENHANCED BOOKINGS WITH SEARCH (NEW FEATURE) */
+function loadBookings(el) {
+  if(el) setActive(el);
   fetch("http://localhost:5000/bookings")
     .then(res => res.json())
     .then(data => {
       let html = `
-        <h4>Bookings</h4>
-        <table class="table table-dark table-striped mt-3">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Vehicle</th>
-              <th>Hours</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4>Booking Records</h4>
+            <input type="text" id="tableSearch" class="form-control w-25" placeholder="Search phone or vehicle..." onkeyup="filterTable()">
+        </div>
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" id="bookingsTable">
+              <thead>
+                <tr>
+                  <th>User Phone</th>
+                  <th>Vehicle</th>
+                  <th>Duration</th>
+                  <th>Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
       `;
 
-      data.forEach(b => {
+      data.reverse().forEach(b => {
         html += `
           <tr>
-            <td>${b.user_phone || "User"}</td>
-            <td>${b.vehicle}</td>
-            <td>${b.hours}</td>
-            <td>₹${b.total}</td>
+            <td class="fw-bold">${b.user_phone || "Unknown"}</td>
+            <td><span class="badge bg-secondary">${b.vehicle}</span></td>
+            <td>${b.hours} Hours</td>
+            <td class="text-success fw-bold">₹${b.total}</td>
           </tr>
         `;
       });
 
-      html += `
-          </tbody>
-        </table>
-      `;
-
+      html += `</tbody></table></div></div>`;
       document.getElementById("adminContent").innerHTML = html;
     });
 }
 
-/* LOAD VEHICLES */
-function loadVehicles() {
+/* SEARCH FILTER LOGIC */
+function filterTable() {
+    let input = document.getElementById("tableSearch").value.toUpperCase();
+    let rows = document.querySelector("#bookingsTable tbody").rows;
+    for (let row of rows) {
+        let text = row.textContent.toUpperCase();
+        row.style.display = text.includes(input) ? "" : "none";
+    }
+}
+
+/* 3. LOAD VEHICLES WITH UI FEEDBACK */
+function loadVehicles(el) {
+  if(el) setActive(el);
   fetch("http://localhost:5000/vehicles")
     .then(res => res.json())
     .then(data => {
       let html = `
-        <h4 class="mb-3">Manage Vehicles</h4>
-
-        <div class="card p-3 mb-4">
-          <h6>Add New Vehicle</h6>
-          <input id="vname" class="form-control mb-2" placeholder="Vehicle name">
-          <input id="vprice" type="number" class="form-control mb-2" placeholder="Price per hour">
-          <button class="btn btn-light" onclick="addVehicle()">Add Vehicle</button>
-        </div>
-
-        <table class="table table-dark table-striped">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Price / hour</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card p-4 mb-4 shadow-sm sticky-top" style="top: 20px;">
+                  <h5 class="mb-3 text-primary">Add New Fleet</h5>
+                  <div class="mb-3">
+                    <label class="small text-muted">Vehicle Name</label>
+                    <input id="vname" class="form-control" placeholder="e.g. Tesla Model S">
+                  </div>
+                  <div class="mb-3">
+                    <label class="small text-muted">Price Per Hour (₹)</label>
+                    <input id="vprice" type="number" class="form-control" placeholder="500">
+                  </div>
+                  <button class="btn btn-primary w-100" onclick="addVehicle()">
+                    <i class="bi bi-plus-circle me-2"></i>Confirm Add
+                  </button>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card p-0 overflow-hidden">
+                    <table class="table table-hover mb-0">
+                      <thead class="table-dark">
+                        <tr>
+                          <th>Vehicle Name</th>
+                          <th>Price / Hr</th>
+                          <th class="text-end px-4">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
       `;
 
       data.forEach(v => {
+        const priceTag = v.price > 1000 ? 'bg-danger' : 'bg-primary';
         html += `
           <tr>
-            <td>${v.name}</td>
-            <td>₹${v.price}</td>
-            <td>
-              <button class="btn btn-sm btn-danger" onclick="deleteVehicle(${v.id})">
-                Delete
+            <td class="align-middle fw-bold ps-3">${v.name}</td>
+            <td class="align-middle"><span class="badge ${priceTag}">₹${v.price}</span></td>
+            <td class="text-end px-4">
+              <button class="btn btn-outline-danger btn-sm" onclick="deleteVehicle(${v.id})">
+                <i class="bi bi-trash"></i>
               </button>
             </td>
           </tr>
         `;
       });
 
-      html += `
-          </tbody>
-        </table>
-      `;
-
+      html += `</tbody></table></div></div></div>`;
       document.getElementById("adminContent").innerHTML = html;
     });
 }
 
-/* ADD VEHICLE */
+/* ACTIONS */
 function addVehicle() {
   const name = document.getElementById("vname").value;
   const price = document.getElementById("vprice").value;
-
-  if (!name || !price) {
-    alert("Please enter vehicle name and price");
-    return;
-  }
+  if (!name || !price) return alert("Missing fields");
 
   fetch("http://localhost:5000/admin/vehicle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, price })
-  })
-  .then(res => res.json())
-  .then(() => loadVehicles());
+  }).then(() => loadVehicles());
 }
 
-/* DELETE VEHICLE */
 function deleteVehicle(id) {
-  if (!confirm("Delete this vehicle?")) return;
-
-  fetch(`http://localhost:5000/admin/vehicle/${id}`, {
-    method: "DELETE"
-  })
-  .then(res => res.json())
+  if (!confirm("Remove this vehicle from fleet?")) return;
+  fetch(`http://localhost:5000/admin/vehicle/${id}`, { method: "DELETE" })
   .then(() => loadVehicles());
 }
+
+function logout() {
+  sessionStorage.removeItem("admin");
+  window.location.href = "index.html";
+}
+
+// Initial Load
+window.onload = () => loadDashboard();
 </script>
 
 </body>
