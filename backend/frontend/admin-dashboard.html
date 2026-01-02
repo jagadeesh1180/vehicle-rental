@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+
+<h3>Dashboard</h3>
+
+<div class="row g-4 mt-2">
+
+  <div class="col-md-4">
+    <div class="card shadow p-3 text-center">
+      <h5>Total Vehicles</h5>
+      <h2 id="vehicleCount">0</h2>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow p-3 text-center">
+      <h5>Total Bookings</h5>
+      <h2 id="bookingCount">0</h2>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow p-3 text-center">
+      <h5>Total Users</h5>
+      <h2 id="userCount">0</h2>
+    </div>
+  </div>
+
+</div>
+
+<script>
+Promise.all([
+  fetch("http://localhost:5000/vehicles").then(r => r.json()),
+  fetch("http://localhost:5000/bookings").then(r => r.json()),
+  fetch("http://localhost:5000/users").then(r => r.json())
+]).then(([vehicles, bookings, users]) => {
+  document.getElementById("vehicleCount").innerText = vehicles.length;
+  document.getElementById("bookingCount").innerText = bookings.length;
+  document.getElementById("userCount").innerText = users.length;
+});
+</script>
+
+</body>
+
+</html>

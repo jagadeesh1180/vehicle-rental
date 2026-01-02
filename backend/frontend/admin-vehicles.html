@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+
+<h3>Vehicles</h3>
+
+<table class="table table-bordered mt-3">
+  <thead class="table-dark">
+    <tr>
+      <th>Name</th>
+      <th>Price / hr</th>
+    </tr>
+  </thead>
+  <tbody id="vehicleTable"></tbody>
+</table>
+
+<script>
+fetch("http://localhost:5000/vehicles")
+  .then(res => res.json())
+  .then(data => {
+    const table = document.getElementById("vehicleTable");
+    table.innerHTML = "";
+    data.forEach(v => {
+      table.innerHTML += `
+        <tr>
+          <td>${v.name}</td>
+          <td>₹${v.price}</td>
+        </tr>
+      `;
+    });
+  });
+</script>
+
+</body>
+
+</html>
